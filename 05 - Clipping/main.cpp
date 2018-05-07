@@ -127,13 +127,13 @@ void ChangeDirection(Polygon &polygon, Direction direction);
 
 // Проверяем, есть ли текущая точка среди точек полигона. Если да,
 // то вовзращаем ее индекс, иначе -1.
-int Find(GLdouble x, GLdouble y, Polygon polygon);
+int Find(const Point &point, const Polygon &polygon);
 
 // Вставка.
-void Insert(vector<Point> &points, GLdouble x, GLdouble y, Point inter);
+void Insert(vector<Point> &points, Point check_point, Point point);
 
 // Проверка точки на принадлежность полигону.
-bool IsInside(Point point, Polygon &polygon);
+bool IsInside(const Point &point, const Polygon &polygon);
 
 // Функция отрисовки всего и вся.
 void Draw();
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 }
 
 GLFWwindow *Init() {
-   // Инициализация GLFW.
+    // Инициализация GLFW.
     if (! glfwInit()) {
         printf("Error:\nFailed to initialize GLFW.\n");
         return nullptr;
@@ -319,21 +319,21 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if ((key == GLFW_KEY_ENTER) && (action == GLFW_PRESS)) {
         switch (state) {
         case State::FIGURE: {
-            figure.push_back(Polygon());
+            figure.emplace_back(Polygon());
             state = State::FIGURE_HOLE;
             break;
         }
         case State::FIGURE_HOLE: {
-            figure.push_back(Polygon());
+            figure.emplace_back(Polygon());
             break;
         }
         case State::CLIPPER: {
-            clipper.push_back(Polygon());
+            clipper.emplace_back(Polygon());
             state = State::CLIPPER_HOLE;
             break;
         }
         case State::CLIPPER_HOLE: {
-            clipper.push_back(Polygon());
+            clipper.emplace_back(Polygon());
             break;
         }
         default: {
@@ -345,7 +345,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     if ((key == GLFW_KEY_SPACE) && (action == GLFW_PRESS)) {
         switch (state) {
         case State::FIGURE: {
-            figure.push_back(Polygon());
+            figure.emplace_back(Polygon());
             state = State::FIGURE_HOLE;
             break;
         }
@@ -354,7 +354,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             break;
         }
         case State::CLIPPER: {
-            clipper.push_back(Polygon());
+            clipper.emplace_back(Polygon());
             state = State::CLIPPER_HOLE;
             break;
         }
@@ -417,28 +417,28 @@ void MouseCallback(GLFWwindow* window, int button, int action, int mods) {
         switch (state) {
         case State::FIGURE: {
             if (figure.empty()) {
-                figure.push_back(Polygon());
-                figure[0].points.push_back(Point(x, y, 0, 0));
+                figure.emplace_back(Polygon());
+                figure[0].points.emplace_back(Point(x, y, 0, 0));
             } else {
-                figure[0].points.push_back(Point(x, y, 0, 0));
+                figure[0].points.emplace_back(Point(x, y, 0, 0));
             }
             break;
         }
         case State::FIGURE_HOLE: {
-            figure[figure.size() - 1].points.push_back(Point(x, y, figure.size() - 1, 0));
+            figure[figure.size() - 1].points.emplace_back(Point(x, y, figure.size() - 1, 0));
             break;
         }
         case State::CLIPPER: {
             if (clipper.empty()) {
-                clipper.push_back(Polygon());
-                clipper[0].points.push_back(Point(x, y, 0, 0));
+                clipper.emplace_back(Polygon());
+                clipper[0].points.emplace_back(Point(x, y, 0, 0));
             } else {
-                clipper[0].points.push_back(Point(x, y, 0, 0));
+                clipper[0].points.emplace_back(Point(x, y, 0, 0));
             }
             break;
         }
         case State::CLIPPER_HOLE: {
-            clipper[clipper.size() - 1].points.push_back(Point(x, y, 0, clipper.size() - 1));
+            clipper[clipper.size() - 1].points.emplace_back(Point(x, y, 0, clipper.size() - 1));
             break;
         }
         default: {
@@ -479,7 +479,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
     vector<Polygon> clipper1;
     clipper1 = clipper;
     for (size_t k = 0; k < figure.size(); k++) {
-        figure1.push_back(figure[k]);
+        figure1.emplace_back(figure[k]);
         for (size_t i = 0; i < figure[k].points.size(); i++) {
             // Обеспечим цикличность.
             int next1 = (i == figure[k].points.size() - 1) ? 0 : (i + 1);
@@ -509,23 +509,28 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                         continue;
                     }
                     // Иначе добавим ее в обновленные фигуру и отсекатель.
+                    // Точка пересечения.
                     GLdouble vec = k1 / (k1 - k2);
                     Point intersection(figure[k].points[i].x + vec * b1, figure[k].points[i].y - vec * a1, k, l);
+                    // Обозначим точки пересечения.
                     figure1.back().intersection = true;
                     clipper1[l].intersection = true;
-                    Insert(clipper1[l].points, clipper[l].points[j].x, clipper[l].points[j].y, intersection);
-                    Insert(figure1.back().points, figure[k].points[i].x, figure[k].points[i].y, intersection);
+                    // Вставка.
+                    Insert(clipper1[l].points, clipper[l].points[j], intersection);
+                    Insert(figure1.back().points, figure[k].points[i], intersection);
                 }
             }
         }
     }
     
     // Определяем входные и выходные точки для всех последовательностей пересечений.
+    // Также проверяем inside - лежит ли одна фигура внутри другой.
     bool exit = false, flag = false, inside = false;
     for (size_t j = 0; j < figure1.size(); j++) {
         for (size_t i = 0; i < figure1[j].points.size(); i++) {
-            // Проверяем, есть ли искомая точка в массие (index != -1 - есть).
-            int index = Find(figure1[j].points[i].x, figure1[j].points[i].y, figure[j]);
+            // Проверяем, есть ли искомая точка в исходном массиве (index != -1 - есть).
+            // Если она есть, то это означает, что это не точка пересечения.
+            int index = Find(figure1[j].points[i], figure[j]);
             // Если есть, то...
             if (index >= 0) {
                 for (size_t k = 0; k < clipper1.size(); k++) {
@@ -539,7 +544,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                             break;
                         }
                         // Иначе...
-                    } else if( inside) {
+                    } else if(inside) {
                         flag = exit = true;
                     }
                 }
@@ -550,15 +555,15 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                 // Иначе...
             } else {
                 // Проверяем, есть ли искомая точка в другом массие (index != -1 - есть).
-                index = Find(figure1[j].points[i].x, figure1[j].points[i].y, clipper1[figure1[j].points[i].index_clipper]);
+                index = Find(figure1[j].points[i], clipper1[figure1[j].points[i].index_clipper]);
                 if (exit) {
                     figure1[j].points[i].exit = true;
                     clipper1[figure1[j].points[i].index_clipper].points[index].exit = true;
-                    exits.push_back(figure1[j].points[i]);
+                    exits.emplace_back(figure1[j].points[i]);
                 } else {
                     figure1[j].points[i].enter = true;
                     clipper1[figure1[j].points[i].index_clipper].points[index].enter = true;
-                    enters.push_back(figure1[j].points[i]);
+                    enters.emplace_back(figure1[j].points[i]);
                 }
                 exit = !exit;
             }
@@ -589,7 +594,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 if (in_polygon && !in_hole) {
-                    result.push_back(figure[i]);
+                    result.emplace_back(figure[i]);
                 }
             }
         }
@@ -606,7 +611,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 if (!(in_polygon && !in_hole)) {
-                    result.push_back(figure[i]);
+                    result.emplace_back(figure[i]);
                 }
             }
         }
@@ -625,7 +630,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 if (in_polygon && !in_hole) {
-                    result.push_back(clipper[i]);
+                    result.emplace_back(clipper[i]);
                 }
             }
         }
@@ -642,18 +647,22 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 if (!(in_polygon && !in_hole)) {
-                    result.push_back(clipper[i]);
+                    result.emplace_back(clipper[i]);
                 }
             }
         }
     }
 
+    // Если нам нужна разность (внешнее отсечение), то мы должны
+    // сменитьориентацию массива отескателя.
     if (state == State::DIFFERENCE) {
         for (size_t i = 0; i < clipper.size(); i++) {
             std::reverse(clipper[i].points.begin(), clipper[i].points.end());
         }
     }
 
+    // Для Difference и Union мы должны идти по массиву выходных точек,
+    // а для Intersection - по массиву входов.
     if (state == State::DIFFERENCE || state == State::UNION) {
         // Пока стек exits не пуст...
         while (!exits.empty()) {
@@ -663,22 +672,24 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
             Point start = exits.back();
             Point point;
             exits.pop_back();
-            points.push_back(start);
+            points.emplace_back(start);
             Polygon s = figure[start.index_figure];
-            int index = Find(start.x, start.y, s);
+            int index = Find(start, s);
             if (index < (int) s.points.size() - 1) {
                 point = s.points[index+1];
             } else {
                 point = s.points[0];
             }
+            // Пока точки не совпадают.
             while (!((point.x == start.x) && (point.y == start.y))) {
-                index = Find(point.x, point.y, s);
+                index = Find(point, s);
                 point = s.points[index];
+                // До тех пор пока не встретим точку входа (мы же идем с точек выхода).
                 while (point.enter == 0) {
                     if (point.x == start.x && point.y == start.y) {
                         break;
                     }
-                    points.push_back(point);
+                    points.emplace_back(point);
                     index += 1;
                     if (index < (int) s.points.size()) {
                         point = s.points[index];
@@ -688,13 +699,13 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 Polygon c = clipper[point.index_clipper];
-                index = Find(point.x, point.y, c);
+                index = Find(point, c);
                 point = c.points[index];
                 while (point.exit == 0) {
                     if (point.x == start.x && point.y == start.y) {
                         break;
                     }
-                    points.push_back(point);
+                    points.emplace_back(point);
                     index += 1;
                     if (index < (int) c.points.size()) {
                         point = c.points[index];
@@ -707,7 +718,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
             }
             Polygon polygon;
             polygon.points = points;
-            result.push_back(polygon);
+            result.emplace_back(polygon);
         }
     } else {
         // Пока стек enters не пуст...
@@ -718,22 +729,22 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
             Point start = enters.back();
             Point point;
             enters.pop_back();
-            points.push_back(start);
+            points.emplace_back(start);
             Polygon s = figure[start.index_figure];
-            int index = Find(start.x, start.y, s);
+            int index = Find(start, s);
             if (index < (int) s.points.size() - 1) {
                 point = s.points[index+1];
             } else {
                 point = s.points[0];
             }
             while (!((point.x == start.x) && (point.y == start.y))) {
-                index = Find(point.x, point.y, s);
+                index = Find(point, s);
                 point = s.points[index];
                 while (point.exit == 0) {
                     if (point.x == start.x && point.y == start.y) {
                         break;
                     }
-                    points.push_back(point);
+                    points.emplace_back(point);
                     index += 1;
                     if (index < (int) s.points.size()) {
                         point = s.points[index];
@@ -743,13 +754,13 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
                     }
                 }
                 Polygon c = clipper[point.index_clipper];
-                index = Find(point.x, point.y, c);
+                index = Find(point, c);
                 point = c.points[index];
                 while (point.enter == 0) {
                     if (point.x == start.x && point.y == start.y) {
                         break;
                     }
-                    points.push_back(point);
+                    points.emplace_back(point);
                     index += 1;
                     if (index < (int) c.points.size()) {
                         point = c.points[index];
@@ -762,7 +773,7 @@ vector<Polygon> WeilerAtherton(vector<Polygon> figure, vector<Polygon> clipper) 
             }
             Polygon polygon;
             polygon.points = points;
-            result.push_back(polygon);
+            result.emplace_back(polygon);
         }
     }
     
@@ -783,23 +794,23 @@ void ChangeDirection(Polygon &polygon, Direction direction) {
     }
 }
 
-int Find(GLdouble x, GLdouble y, Polygon polygon) {
+int Find(const Point &point, const Polygon &polygon) {
     // Пробегаем весь вектор точек.
     // Если найдем нужную, то вернем ее индекс, иначе -1.
     for (size_t i = 0; i < polygon.points.size(); i++) {
-        if ((polygon.points[i].x == x) && (polygon.points[i].y == y)) {
+        if ((polygon.points[i].x == point.x) && (polygon.points[i].y == point.y)) {
             return i;
         }
     }
     return -1;
 }
 
-bool IsInside(Point point, Polygon &polygon) {
+bool IsInside(const Point &point, const Polygon &polygon) {
     // Проверка точки на принадлежность полигону методом трассировки лучей.
     bool inside = false;
-    for (size_t i = 0, j = polygon.points.size() - 1; i < polygon.points.size(); j = i++){
-        if ((((polygon.points[i].y<=point.y) && (point.y<polygon.points[j].y)) ||
-             ((polygon.points[j].y<=point.y) && (point.y<polygon.points[i].y))) &&
+    for (size_t i = 0, j = polygon.points.size() - 1; i < polygon.points.size(); j = i++) {
+        if ((((polygon.points[i].y <= point.y) && (point.y < polygon.points[j].y)) ||
+             ((polygon.points[j].y <= point.y) && (point.y < polygon.points[i].y))) &&
             (point.x > (polygon.points[j].x - polygon.points[i].x) * (point.y - polygon.points[i].y) / 
              (polygon.points[j].y - polygon.points[i].y) + polygon.points[i].x)) {
             inside = !inside;
@@ -808,15 +819,19 @@ bool IsInside(Point point, Polygon &polygon) {
     return inside;
 }
 
-void Insert(vector<Point> &points, GLdouble x, GLdouble y, Point point) {
+void Insert(vector<Point> &points, Point check_point, Point point) {
+    // Вставка точки point в массив points после точки ckeck_point
     size_t i;
     for (i = 0; i < points.size(); i++) {
-        if ((points[i].x == x) && (points[i].y == y)) {
+        if ((points[i].x == check_point.x) && (points[i].y == check_point.y)) {
             break;
         }
     }
-    while ((i + 1 != points.size()) && (sqrt((point.x-x)*(point.x-x)+(point.y-y)*(point.y-y)) >
-          sqrt((points[i+1].x-x)*(points[i+1].x-x)+(points[i+1].y-y)*(points[i+1].y-y)))) {
+    while ((i + 1 != points.size()) && 
+           (std::sqrt((point.x - check_point.x) * (point.x - check_point.x) +
+                      (point.y - check_point.y) * (point.y-check_point.y)) >
+            std::sqrt((points[i + 1].x - check_point.x) * (points[i + 1].x - check_point.x) +
+                      (points[i + 1].y - check_point.y) * (points[i + 1].y - check_point.y)))) {
         i++;
     }
     points.insert(points.begin() + (i + 1), point);
