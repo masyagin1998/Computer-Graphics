@@ -1,9 +1,13 @@
 #include "utils.hpp"
+#include <iostream>
 
 std::string file_in;
 std::string file_out;
 
 JSONConfig json_config;
+
+Spring spring;
+Box box;
 
 bool keys[1024];
 
@@ -43,20 +47,14 @@ GLFWwindow *Init(const JSONConfig &json_config) {
         printf("Error:\nFailed to initialize GLEW.\n");
         return nullptr;
     }
-
-    // Включение теста глубины.
-    glEnable(GL_DEPTH_TEST);
-
+    
     // Включение альфа-канала.
     glEnable(GL_BLEND);
     glEnable(GL_ALPHA);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    
     // Включение текстур.
     glEnable(GL_TEXTURE_2D);
-
-    // Включение нормализации.
-    glEnable(GL_NORMALIZE);
 
     // Включение света.
     glEnable(GL_LIGHT0);
@@ -77,6 +75,7 @@ GLFWwindow *Init(const JSONConfig &json_config) {
     gluPerspective(45, 1.0f, 0.1, 1000);
     glRotatef(5.0f, 1.0f, 0.0f, 0.0f);
     glRotatef(-5.0f, 0.0f, 1.0f, 0.0f);
+    glMatrixMode(GL_MODELVIEW);
     
     return window;
 }
@@ -89,4 +88,53 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
     prefix_unused(window);
     int size = std::min<int>(width, height);
     glViewport(0, 0, size, size);
+}
+
+void Draw() {
+   if (json_config.show_textures) {
+       glCallList(box.box_far_with_texture);
+       glPushMatrix();
+       glTranslatef(spring.translation.X, spring.translation.Y, spring.translation.Z);
+       glCallList(spring.material);
+       glCallList(spring.with_texture);
+       glPopMatrix();
+       glCallList(box.box_near_with_texture);
+   } else {
+       glCallList(box.box_far_without_texture);
+       glPushMatrix();
+       glTranslatef(spring.translation.X, spring.translation.Y, spring.translation.Z);
+       glCallList(spring.material);
+       glCallList(spring.without_texture);
+       glPopMatrix();
+       glCallList(box.box_near_without_texture);
+   }
+}
+
+void Intersection() {
+    // Проверим, было ли пересечение коробки и пружины.
+    // Если да, то отразим вектор скорости последней.
+    auto top = spring.GetTopCircle();
+    auto bottom = spring.GetBottomCircle();
+    auto tr  = spring.GetTranslation();
+    
+    bool flag_x = false;
+    bool flag_y = false;
+    bool flag_z = false;
+    
+    for (size_t i = 0; i < top.size(); i++) {
+        if (((top[i].X + tr.X < box.left[0].X) || (top[i].X + tr.X > box.right[0].X)) && !flag_x) {
+            json_config.speed_translation.X *= -1.0f;
+            flag_x = true;
+        }
+        
+        if (((top[i].Y + tr.Y > box.top[0].Y) || (bottom[i].Y + tr.Y < box.bottom[0].Y)) && !flag_y) {
+            json_config.speed_translation.Y *= -1.0f;
+            flag_y = true;
+        }
+        
+        if (((top[i].Z + tr.Z > box.near[0].Z) || (top[i].Z + tr.Z < box.far[0].Z)) && !flag_z) {
+            json_config.speed_translation.Z *= -1.0f;
+            flag_z = true;
+        }
+    }
 }

@@ -61,9 +61,6 @@ static Spring dynamic_spring = Spring(1.0f, 0.1f, 2.0f,
 // Инициализация окна.
 GLFWwindow *Init(GLuint width, GLuint height, const char *name);
 
-// Инициализация камеры.
-void Camera(int viewPortWidth, int viewPortHeight);
-
 // Коллбэки.
 // Обработка ошибок OpenGL и GLWF.
 void ErrorCallback(int error, const char* description);
@@ -76,9 +73,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 // Выбор способо отображения полигонов.
 void ChoosePolygonMode();
-
-// Выбор того, какие переменные углов и масштаба надо сбросить.
-void ChooseWhatToRestoreToDefaults();
 
 // Поворот.
 void DoChanges();

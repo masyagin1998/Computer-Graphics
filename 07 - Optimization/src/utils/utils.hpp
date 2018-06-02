@@ -14,8 +14,8 @@
 
 // Для работы с конфигурационным файлом.
 #include "../json_config/json_config.hpp"
-
-// Для работы с текстурами.
+#include "../box/box.hpp"
+#include "../spring/spring.hpp"
 #include "../texture/texture.hpp"
 
 // Макрос для неиспользуемых переменных.
@@ -28,6 +28,11 @@ extern std::string file_out;
 
 // Конфиг.
 extern JSONConfig json_config;
+
+// Динамическая пружина.
+extern Spring spring;
+// Коробка.
+extern Box box;
 
 // Клавиши.
 extern bool keys[1024];
@@ -45,5 +50,11 @@ void ErrorCallback(int error, const char* description);
 
 // Изменение размера экрана.
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+
+// Отрисовка.
+void Draw();
+
+// Обсчет пересечений.
+void Intersection();
 
 #endif  // UTILS_HPP
