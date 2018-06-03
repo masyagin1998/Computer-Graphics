@@ -85,9 +85,9 @@ int main(int argc, char **argv) {
 
     // Загрузка шейдеров;
     // Программа 0.
-    Shader program0 = Shader("shaders/shader0/shader.vs", "shaders/shader0/shader.frag");
+    Shader program0 = Shader("src/shaders/shader0/shader.vs", "src/shaders/shader0/shader.frag");
     // Программа 1.
-    Shader program1 = Shader("shaders/shader1/shader.vs", "shaders/shader1/shader.frag");
+    Shader program1 = Shader("src/shaders/shader1/shader.vs", "src/shaders/shader1/shader.frag");
 
     // Треугольная пирамида.
     GLfloat pyramid[] = {
@@ -193,8 +193,8 @@ int main(int argc, char **argv) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // Загрузка текстур.
-    GLuint texture_asuka = LoadTexture((char *)"textures/asuka.png");
-    GLuint texture_rey = LoadTexture((char *)"textures/rey.png");
+    GLuint texture_asuka = LoadTexture((char *)"src/textures/asuka.png");
+    GLuint texture_rey = LoadTexture((char *)"src/textures/rey.png");
 
     // Установка миксера текстур.
     GLfloat mix_value = 0.0f;
