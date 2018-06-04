@@ -1,6 +1,6 @@
 {
     "showAnimation": "true",
-    "showTextures": "false",
+    "showTextures": "true",
     "window": {
         "windowName": "Lab - 06. Masyagin Mikhail. IU9-42B.",
         "screenWidth": "1920",
@@ -42,17 +42,17 @@
             "numberOfCoils": "3"
         },
         "quality": {
-            "qualityWire": "20",
-            "qualitySpring": "200"
+            "qualityWire": "15",
+            "qualitySpring": "120"
         },
         "translation": {
-            "X": "-0.152963638",
-            "Y": "-0.152963638",
-            "Z": "-19.9413719"
+            "X": "1.88358021",
+            "Y": "1.88358021",
+            "Z": "-22.6179924"
         },
         "speed_translation": {
-            "X": "0.5",
-            "Y": "0.5",
+            "X": "-0.5",
+            "Y": "-0.5",
             "Z": "0.5"
         },
         "texture": "textures\/brick.jpg",
@@ -108,9 +108,9 @@
             "B": "0.600000024",
             "A": "0.899999976"
         },
-        "constantAttenuation": "0.961795211",
-        "linearAttenuation": "0.0128174424",
-        "quadraticAttenuation": "0.0154897673",
+        "constantAttenuation": "0.95029223",
+        "linearAttenuation": "0.00516785635",
+        "quadraticAttenuation": "0.00466698781",
         "speedChange": {
             "X": "0.00999999978",
             "Y": "0.00999999978",

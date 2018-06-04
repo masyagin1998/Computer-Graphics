@@ -73,7 +73,6 @@ void Spring::GenerateVertices() {
     }
 
     // Задание качества.
-    GLfloat wire_angle_min = 0.0f;
     GLfloat wire_angle_max = 2.0f * M_PI;
     GLfloat wire_step = wire_angle_max / (GLfloat) quality_wire;
 
@@ -82,42 +81,25 @@ void Spring::GenerateVertices() {
     GLfloat spring_step = spring_angle_max / (GLfloat) quality_spring;
     
     // Задание координат пружины.
-    for (GLfloat spring_angle = spring_angle_min; spring_angle < spring_angle_max; spring_angle += spring_step) {
+    for (int i = 0; i <= quality_spring; i++) {
         vertecies.push_back(std::vector<Vertex>());
-        for (GLfloat wire_angle = wire_angle_min; wire_angle < wire_angle_max; wire_angle += wire_step) {
-            GLfloat current_x = (spring_radius + wire_radius * cos(wire_angle)) * sin(spring_angle);
-            GLfloat current_y = -(spring_radius + wire_radius * cos(wire_angle)) * cos(spring_angle);
-            GLfloat current_z = (spring_angle / M_PI) / pressure_coefficient + wire_radius * sin(wire_angle);
+        for (int j = 0; j <= quality_wire; j++) {
+            GLfloat current_x = (spring_radius + wire_radius * cos(j * wire_step)) * sin(i * spring_step);
+            GLfloat current_y = -(spring_radius + wire_radius * cos(j * wire_step)) * cos(i * spring_step);
+            GLfloat current_z = (i * spring_step / M_PI) / pressure_coefficient + wire_radius * sin(j * wire_step);
             Vertex current = {current_x, current_y, current_z};
             vertecies[vertecies.size() - 1].push_back(current);
         }
-        GLfloat current_x = (spring_radius + wire_radius * cos(wire_angle_max)) * sin(spring_angle);
-        GLfloat current_y = -(spring_radius + wire_radius * cos(wire_angle_max)) * cos(spring_angle);
-        GLfloat current_z = (spring_angle / M_PI) / pressure_coefficient + wire_radius * sin(wire_angle_max);
-        Vertex current = {current_x, current_y, current_z};
-        vertecies[vertecies.size() - 1].push_back(current);
     }
-    vertecies.push_back(std::vector<Vertex>());
-    for (GLfloat wire_angle = wire_angle_min; wire_angle <= wire_angle_max; wire_angle += wire_step) {
-        GLfloat current_x = (spring_radius + wire_radius * cos(wire_angle)) * sin(spring_angle_max);
-        GLfloat current_y = -(spring_radius + wire_radius * cos(wire_angle)) * cos(spring_angle_max);
-        GLfloat current_z = (spring_angle_max / M_PI) / pressure_coefficient + wire_radius * sin(wire_angle);
-        Vertex current = {current_x, current_y, current_z};
-        vertecies[vertecies.size() - 1].push_back(current);
-    }
-    GLfloat current_x = (spring_radius + wire_radius * cos(wire_angle_max)) * sin(spring_angle_max);
-    GLfloat current_y = -(spring_radius + wire_radius * cos(wire_angle_max)) * cos(spring_angle_max);
-    GLfloat current_z = (spring_angle_max / M_PI) / pressure_coefficient + wire_radius * sin(wire_angle_max);
-    Vertex current = {current_x, current_y, current_z};
-    vertecies[vertecies.size() - 1].push_back(current);
 
-    for (size_t i = 0; i < vertecies.size(); i++)
+    for (size_t i = 0; i < vertecies.size(); i++) {
         std::reverse(vertecies[i].begin(), vertecies[i].end());
+    }
 
     // Задание векторов нормалей.
     for (size_t i = 0; i < vertecies.size() - 1; i++) {
         normals.push_back(std::vector<Vertex>());
-        for (size_t j = 0; j < vertecies[i].size() / 2; j++) {
+        for (size_t j = 0; j < vertecies[i].size() / 2 - 1; j++) {
             auto a = vertecies[i][j];
             auto b = vertecies[i + 1][j];
             auto c = vertecies[i + 1][j + 1];
@@ -145,10 +127,7 @@ void Spring::GenerateVertices() {
     }
     
     for (size_t i = 0; i < vertecies.size() - 1; i++) {
-        for (size_t j = vertecies[i].size() / 2; j < vertecies[i].size() - 1; j++) {
-            if (j >= vertecies[i].size() / 2) {
-                glColor4f(1.0f, 1.0f, 0.0f, 1.0f);
-            }
+        for (size_t j = vertecies[i].size() / 2 - 1; j < vertecies[i].size() - 1; j++) {
             auto a = vertecies[i][j];
             auto b = vertecies[i + 1][j];
             auto c = vertecies[i + 1][j + 1];
@@ -176,6 +155,7 @@ void Spring::GenerateVertices() {
         }
     }
     
+    // Задание текстур.
     GLfloat spring_tex = 0.0f;
     GLfloat spring_tex_step = 1.0f / ((GLfloat) quality_spring / (GLfloat) number_of_coils);
     GLfloat wire_tex = 0.0f;
@@ -190,8 +170,6 @@ void Spring::GenerateVertices() {
         }
         spring_tex += spring_tex_step;
     }
-
-    // Генерация массивов вершин, нормалей и текстур.
 
     // Задание колец-ограничителей.
     spring_angle_max = 2.0f * M_PI;
@@ -211,7 +189,114 @@ void Spring::GenerateVertices() {
 }
 
 void Spring::Compile() {
+    std::vector<GLfloat> vertecies_back;
+    std::vector<GLfloat> normals_back;
+    std::vector<GLfloat> tex_back;
+
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        auto b = vertecies[i + 1][0];
+        vertecies_back.push_back(b.X);
+        vertecies_back.push_back(b.Y);
+        vertecies_back.push_back(b.Z);
+        normals_back.push_back(0.0f);
+        normals_back.push_back(0.0f);
+        normals_back.push_back(0.0f);
+        tex_back.push_back(texels[i][1].X);
+        tex_back.push_back(texels[i][1].Y);                                               
+        auto a = vertecies[i][0];
+        vertecies_back.push_back(a.X);
+        vertecies_back.push_back(a.Y);
+        vertecies_back.push_back(a.Z);
+        normals_back.push_back(0.0f);
+        normals_back.push_back(0.0f);
+        normals_back.push_back(0.0f);
+        tex_back.push_back(texels[i + 1][1].X);
+        tex_back.push_back(texels[i + 1][1].Y);
+        for (size_t j = 0; j < vertecies[i].size() / 2 - 1; j++) {
+            auto c = vertecies[i + 1][j + 1];
+            vertecies_back.push_back(c.X);
+            vertecies_back.push_back(c.Y);
+            vertecies_back.push_back(c.Z);
+            normals_back.push_back(normals[i][j].X);
+            normals_back.push_back(normals[i][j].Y);
+            normals_back.push_back(normals[i][j].Z);
+            tex_back.push_back(texels[i][j].X);
+            tex_back.push_back(texels[i][j].Y);
+            auto d = vertecies[i][j + 1];
+            vertecies_back.push_back(d.X);
+            vertecies_back.push_back(d.Y);
+            vertecies_back.push_back(d.Z);
+            normals_back.push_back(normals[i][j].X);
+            normals_back.push_back(normals[i][j].Y);
+            normals_back.push_back(normals[i][j].Z);
+            tex_back.push_back(texels[i + 1][j].X);
+            tex_back.push_back(texels[i + 1][j].Y);
+        }
+    }
+
+    std::vector<GLfloat> vertecies_front;
+    std::vector<GLfloat> normals_front;
+    std::vector<GLfloat> tex_front;
+    
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        auto b = vertecies[i + 1][vertecies[i].size() / 2 - 1];
+        vertecies_front.push_back(b.X);
+        vertecies_front.push_back(b.Y);
+        vertecies_front.push_back(b.Z);
+        normals_front.push_back(0.0f);
+        normals_front.push_back(0.0f);
+        normals_front.push_back(0.0f);
+        tex_front.push_back(texels[i][vertecies[i].size() / 2 + 1].X);
+        tex_front.push_back(texels[i][vertecies[i].size() / 2 + 1].Y);
+        auto a = vertecies[i][vertecies[i].size() / 2 - 1];
+        vertecies_front.push_back(a.X);
+        vertecies_front.push_back(a.Y);
+        vertecies_front.push_back(a.Z);
+        normals_front.push_back(0.0f);
+        normals_front.push_back(0.0f);
+        normals_front.push_back(0.0f);
+        tex_front.push_back(texels[i + 1][vertecies[i].size() / 2 + 1].X);
+        tex_front.push_back(texels[i + 1][vertecies[i].size() / 2 + 1].Y);
+        for (size_t j = vertecies[i].size() / 2 - 1; j < vertecies[i].size() - 1; j++) {
+            auto c = vertecies[i + 1][j + 1];
+            vertecies_front.push_back(c.X);
+            vertecies_front.push_back(c.Y);
+            vertecies_front.push_back(c.Z);
+            normals_front.push_back(normals[i][j].X);
+            normals_front.push_back(normals[i][j].Y);
+            normals_front.push_back(normals[i][j].Z);
+            tex_front.push_back(texels[i][j].X);
+            tex_front.push_back(texels[i][j].Y);
+            auto d = vertecies[i][j + 1];
+            vertecies_front.push_back(d.X);
+            vertecies_front.push_back(d.Y);
+            vertecies_front.push_back(d.Z);
+            normals_front.push_back(normals[i][j].X);
+            normals_front.push_back(normals[i][j].Y);
+            normals_front.push_back(normals[i][j].Z);
+            tex_front.push_back(texels[i + 1][j].Y);
+            tex_front.push_back(texels[i + 1][j].Y);
+        }
+    }
+
     glNewList(without_texture, GL_COMPILE);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 3, vertecies_back.data());
+    glNormalPointer(GL_FLOAT, sizeof(GLfloat) * 3, normals_back.data());
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        glDrawArrays(GL_TRIANGLE_STRIP, i * (vertecies[0].size() / 2) * 2, (vertecies[0].size() / 2) * 2);
+    }
+    glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 3, vertecies_front.data());
+    glNormalPointer(GL_FLOAT, sizeof(GLfloat) * 3, normals_front.data());
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        glDrawArrays(GL_TRIANGLE_STRIP, ((vertecies[0].size() - 1) - (vertecies[0].size() / 2 - 1) + 1) * 2 * i, ((vertecies[0].size() - 1) - (vertecies[0].size() / 2 - 1) + 1) * 2); 
+    }
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+
+    /*
     for (size_t i = 0; i < vertecies.size() - 1; i++) {
         auto a = vertecies[i][0];
         auto b = vertecies[i + 1][0];
@@ -236,7 +321,7 @@ void Spring::Compile() {
         glBegin(GL_TRIANGLE_STRIP);
         glVertex3f(a.X, a.Y, a.Z);
         glVertex3f(b.X, b.Y, b.Z);
-        for (size_t j = vertecies[i].size() / 2; j < vertecies[i].size() - 1; j++) {
+        for (size_t j = vertecies[i].size() / 2; j < vertecies[i].size() - 2; j++) {
             auto c = vertecies[i + 1][j + 1];
             auto d = vertecies[i][j + 1];
             Vertex v = normals[i][j];
@@ -247,10 +332,31 @@ void Spring::Compile() {
         }        
         glEnd();
     }
+    */
+
     glEndList();
-        
     glNewList(with_texture, GL_COMPILE);
     glBindTexture(GL_TEXTURE_2D, texture);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 3, vertecies_back.data());
+    glNormalPointer(GL_FLOAT, sizeof(GLfloat) * 3, normals_back.data());
+    glTexCoordPointer(2, GL_FLOAT, sizeof(GLfloat) * 2, tex_back.data());
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        glDrawArrays(GL_TRIANGLE_STRIP, i * (vertecies[0].size() / 2) * 2, (vertecies[0].size() / 2) * 2);
+    }
+    glVertexPointer(3, GL_FLOAT, sizeof(GLfloat) * 3, vertecies_front.data());
+    glNormalPointer(GL_FLOAT, sizeof(GLfloat) * 3, normals_front.data());
+    glTexCoordPointer(2, GL_FLOAT, sizeof(GLfloat) * 2, tex_front.data());
+    for (size_t i = 0; i < vertecies.size() - 1; i++) {
+        glDrawArrays(GL_TRIANGLE_STRIP, ((vertecies[0].size() - 1) - (vertecies[0].size() / 2 - 1) + 1) * 2 * i, ((vertecies[0].size() - 1) - (vertecies[0].size() / 2 - 1) + 1) * 2); 
+    }
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    /*
     for (size_t i = 0; i < vertecies.size() - 1; i++) {
         auto a = vertecies[i][0];
         auto b = vertecies[i + 1][0];
@@ -281,7 +387,7 @@ void Spring::Compile() {
         glVertex3f(a.X, a.Y, a.Z);
         glTexCoord2f(texels[i + 1][vertecies[i].size() / 2 + 1].X, texels[i + 1][vertecies[i + 1].size() / 2 + 1].Y);
         glVertex3f(b.X, b.Y, b.Z);
-        for (size_t j = vertecies[i].size() / 2; j < vertecies[i].size() - 1; j++) {
+        for (size_t j = vertecies[i].size() / 2 - 1; j < vertecies[i].size() - 2; j++) {
             auto c = vertecies[i + 1][j + 1];
             auto d = vertecies[i][j + 1];
             Vertex v = normals[i][j];
@@ -294,6 +400,7 @@ void Spring::Compile() {
         }        
         glEnd();
     }
+    */
     glBindTexture(GL_TEXTURE_2D, 0);
     glEndList();
 }
